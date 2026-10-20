@@ -1,0 +1,12 @@
+{
+  "name": "abfahrt-live-monitor",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Persönlicher Echtzeit- und Fahrplanmonitor für Wien und Österreich",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}

@@ -1,0 +1,835 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#0b0d0e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Abfahrt">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <title>Abfahrt — Live Öffi-Tafel Wien</title>
+  <style>
+    :root { color-scheme: dark; --bg:#111313; --panel:#151717; --panel2:#1b1e1e; --line:#353a38; --muted:#9b9f9b; --text:#f3f1e8; --lime:#f4c84b; --amber:#f4c84b; --red:#ff8077; }
+    * { box-sizing:border-box }
+    body { margin:0; background:var(--bg); color:var(--text); font:15px/1.45 Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; min-height:100vh; }
+    .shell { max-width:1120px; margin:0 auto; padding:36px 28px 48px }
+    header { display:flex; justify-content:space-between; align-items:center; gap:18px; margin-bottom:34px }
+    .brand { display:flex; align-items:center; gap:12px; font-weight:750; letter-spacing:-.04em; font-size:18px }
+    .brandmark { width:34px;height:34px;display:grid;place-items:center;border-radius:4px;background:#f4c84b;color:#111;font-size:18px }
+    .eyebrow { color:var(--muted); text-transform:uppercase; letter-spacing:.15em; font-size:10px; font-weight:700 }
+    .headmeta { display:flex; align-items:center; gap:18px; color:var(--muted); font-size:12px }
+    .livebadge { display:flex; align-items:center; gap:7px; color:#d9f8a5; background:#c5f36b12; border:1px solid #c5f36b2a; border-radius:999px; padding:7px 11px }
+    .dot { width:7px;height:7px;background:var(--lime);border-radius:50% }
+    .intro { max-width:720px; margin-bottom:24px }
+    h1 { margin:8px 0 9px; font-size:clamp(32px,5vw,52px); letter-spacing:-.055em; line-height:1.03 }
+    .intro p { color:#a9b2b0; margin:0; font-size:15px }
+    .controls { display:grid;grid-template-columns:minmax(220px,1fr) auto;gap:14px;align-items:end;margin:25px 0 18px }
+    .searchlabel { display:block;color:var(--muted);font-size:12px;margin:0 0 7px 2px }
+    .searchwrap { position:relative }
+    input,select { width:100%;height:48px;border:1px solid #464b48;border-radius:4px;background:#1a1d1c;color:var(--text);padding:0 13px;font:inherit;outline:none }
+    input:focus { border-color:var(--lime);box-shadow:0 0 0 3px #c5f36b15 }
+    .suggestions { display:none;position:absolute;z-index:5;top:53px;left:0;right:0;max-height:280px;overflow:auto;padding:6px;background:#171a19;border:1px solid #484d49;border-radius:4px;box-shadow:0 14px 35px #0009 }
+    .suggestions.open { display:block }
+    .suggestion { display:flex;justify-content:space-between;gap:14px;width:100%;border:0;background:none;color:var(--text);text-align:left;padding:10px 11px;border-radius:2px;cursor:pointer;font:inherit }
+    .suggestion:hover,.suggestion:focus { background:#252e2e;outline:none }
+    .suggestion small { color:var(--muted);white-space:nowrap }
+    .clockbox { min-width:160px;height:48px;padding:7px 14px;border:1px solid var(--line);border-radius:12px;background:#111516 }
+    .clockbox strong { display:block;font-variant-numeric:tabular-nums;font-size:17px;letter-spacing:.04em }
+    .clockbox span { display:block;color:var(--muted);font-size:10px }
+    .board { border:5px solid #292d2b;background:#080a09;border-radius:5px;overflow:hidden;box-shadow:0 18px 50px #0008 }
+    .boardtop { padding:20px 24px 17px;display:flex;align-items:flex-end;justify-content:space-between;gap:20px;border-bottom:1px solid #343832;background:#0c0e0d }
+    .boardtop .eyebrow { color:#b6ad8b }
+    .stationname { color:#f2cc56;font-family:"Arial Narrow",Impact,ui-sans-serif,sans-serif;font-size:27px;letter-spacing:.025em;text-transform:uppercase;font-weight:700;margin:4px 0 2px }
+    .stationdetail { color:#acae9e;font-size:12px }
+    .refresh { color:var(--muted);text-align:right;font-size:11px;white-space:nowrap }
+    .refresh strong { color:var(--lime);font-variant-numeric:tabular-nums }
+    .refresh button { display:block;margin:6px 0 0 auto;border:1px solid #4a4b40;border-radius:3px;background:#1a1c19;color:#dedac8;padding:5px 8px;font:inherit;font-size:10px;cursor:pointer }
+    .refresh button:hover:not(:disabled) { border-color:var(--amber);color:var(--amber) }
+    .refresh button:disabled { opacity:.48;cursor:default }
+    .filters { padding:11px 20px;display:flex;gap:7px;overflow:auto;border-bottom:1px solid #343832;background:#0d0f0e }
+    .filter { flex:none;padding:7px 12px;border-radius:3px;border:1px solid transparent;background:transparent;color:#aaa99e;font:inherit;font-size:12px;font-weight:600;cursor:pointer }
+    .filter:hover { background:#1b2223;color:var(--text) }
+    .filter.active { color:#10110f;background:#f4c84b;border-color:#f4c84b }
+    .filter .count { color:#7c8986;margin-left:4px;font-variant-numeric:tabular-nums }
+    .tablehead,.row { display:grid;grid-template-columns:95px minmax(130px,1fr) minmax(120px,.8fr) 100px;align-items:center;gap:12px }
+    .tablehead { padding:10px 24px;color:#b6ad8b;text-transform:uppercase;letter-spacing:.11em;font-size:10px;border-bottom:1px solid #343832;background:#121413 }
+    .departures { min-height:180px }
+    .row { padding:14px 24px;border-bottom:1px solid #222622;min-height:59px }
+    .row-button { width:100%;text-align:left;background:transparent;color:inherit;border:0;font:inherit;cursor:pointer }
+    .row-button:hover,.row-button:focus-visible { background:#ffffff08;outline:2px solid #f4c84b;outline-offset:-2px }
+    .stop-details { padding:12px 24px 16px 139px;background:#101312;border-bottom:1px solid #343832 }
+    .stop-details[hidden] { display:none }
+    .stop-details h3 { margin:0 0 9px;color:#f3d58d;font-size:12px }
+    .stop-list { display:grid;gap:5px;color:#dce2dd;font-size:12px }
+    .stop-item { display:flex;justify-content:space-between;gap:12px }
+    .stop-item.current { color:#f4c84b;font-weight:700 }
+    .delay { color:#ff9b83;font-weight:700 }
+    .row:last-child { border-bottom:0 }
+    .linecell { display:flex;align-items:center;gap:8px }
+    .linepill { min-width:42px;height:29px;padding:0 8px;display:grid;place-items:center;border-radius:2px;background:#e9e9e2;color:#131616;font-size:12px;font-weight:800;letter-spacing:-.02em }
+    .linepill.u1 {background:#e64e43;color:white}.linepill.u2{background:#a856aa;color:white}.linepill.u3{background:#f59e21;color:#161616}.linepill.u4{background:#17966a;color:white}.linepill.u6{background:#a2412f;color:white}.linepill.s{background:#e7e9e5;color:#171a19}.linepill.rex{background:#f3f4f0;color:#17221c}
+    .dest { font-weight:650;letter-spacing:-.015em }
+    .sub { color:var(--muted);font-size:11px;margin-top:3px }
+    .platform { color:#e6ece8;font-size:13px }
+    .timecell { text-align:right;font-variant-numeric:tabular-nums }
+    .mins { color:#f4cc58;font-size:17px;font-weight:750;letter-spacing:-.02em;font-family:ui-monospace,"SFMono-Regular",Consolas,monospace }
+    .clock { color:#9ea8a4;font-size:11px;margin-top:1px }
+    .empty { display:grid;place-items:center;min-height:210px;padding:28px;text-align:center;color:var(--muted) }
+    .empty strong { display:block;color:#e4eae5;font-size:15px;margin-bottom:6px }
+    .error { color:var(--red) }
+    .foot { display:flex;justify-content:space-between;gap:18px;padding:13px 23px;border-top:1px solid var(--line);color:#75817e;font-size:10px }
+    .foot a { color:#a8b5af;text-decoration:none }.foot a:hover{color:var(--lime)}
+    .future { margin-top:22px;padding:19px 21px;border:1px solid var(--line);border-radius:4px;background:#151817;display:flex;justify-content:space-between;align-items:center;gap:20px }
+    .future h2 { font-size:14px;margin:0 0 4px;letter-spacing:-.02em }
+    .future p { color:var(--muted);font-size:12px;margin:0 }
+    .horizon { display:flex;align-items:center;gap:6px;flex-wrap:wrap;justify-content:flex-end }
+    .horizon button { border:1px solid #454a46;background:#1b1e1c;border-radius:3px;color:#aab3b1;padding:7px 10px;cursor:pointer;font:inherit;font-size:11px;font-weight:600 }
+    .horizon button.active {border-color:#f4c84b;color:#161612;background:#f4c84b}
+    .directionbar {display:flex;align-items:center;gap:10px;padding:11px 20px;border-bottom:1px solid #343832;background:#111312}
+    .directionbar label {color:#b6ad8b;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.1em;white-space:nowrap}
+    .directionbar select {max-width:310px;height:36px;border-color:#3b403c;background:#191c1a;font-size:12px}
+    .notice { margin-top:18px;padding:14px 17px;border-left:2px solid var(--amber);background:#ffc8570b;color:#aab2af;font-size:12px;line-height:1.55 }
+    .notice strong { color:#f3d58d }
+    .alerts-card,.favorites-card { margin-top:18px;padding:17px 19px;border:1px solid var(--line);border-radius:5px;background:#151817 }
+    .section-head { display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:10px }
+    .section-head h2 { margin:0;font-size:15px }
+    .section-head small,.alert-meta { color:var(--muted);font-size:11px }
+    .alert-list { display:grid;gap:8px }
+    .alert-item { padding:10px 12px;border-left:2px solid var(--amber);background:#ffc8570b }
+    .alert-item strong { display:block;font-size:12px;color:#f3d58d }
+    .alert-item p { margin:4px 0 0;color:#aeb6b2;font-size:11px }
+    .favorite-list { display:flex;gap:8px;flex-wrap:wrap }
+    .favorite-chip,.favorite-button { border:1px solid #444b45;border-radius:4px;background:#1a1e1b;color:#e7e9e1;padding:8px 10px;font:inherit;font-size:11px;cursor:pointer }
+    .favorite-chip:hover,.favorite-button:hover { border-color:var(--amber);color:var(--amber) }
+    .transfer-warning { padding:8px 10px;margin:0 0 8px 49px;border-left:2px solid var(--amber);background:#ffc8570b;color:#f3d58d;font-size:11px }
+    .freshness { color:var(--muted);font-size:11px;margin-top:12px }
+    .menu-toggle { width:42px;height:42px;display:grid;align-content:center;justify-items:center;gap:5px;border:1px solid var(--line);border-radius:4px;background:#171a19;color:var(--text);cursor:pointer }
+    .menu-toggle span { width:18px;height:2px;background:#f4c84b;border-radius:2px }
+    .site-menu { position:fixed;z-index:20;inset:0 auto 0 0;width:min(310px,86vw);padding:25px 19px;background:#151817;border-right:1px solid #373d39;box-shadow:20px 0 55px #0008;transform:translateX(-105%);transition:transform .18s ease }
+    .site-menu.open { transform:translateX(0) }
+    .menu-backdrop { display:none;position:fixed;z-index:19;inset:0;background:#0009 }
+    .menu-backdrop.open { display:block }
+    .menu-title { margin:0 0 25px;font-size:15px;font-weight:750 }
+    .menu-link { width:100%;display:flex;align-items:center;gap:12px;margin:5px 0;padding:12px 13px;border:1px solid transparent;border-radius:4px;background:transparent;color:#bbc2bd;text-align:left;font:inherit;cursor:pointer }
+    .menu-link:hover,.menu-link.active { color:#f6d36b;background:#f4c84b12;border-color:#f4c84b35 }
+    .menu-icon { width:22px;text-align:center;color:#f4c84b }
+    .page { display:none }
+    .page.active { display:block }
+    .planner-card,.network-card { margin-top:21px;padding:22px;border:1px solid var(--line);border-radius:5px;background:#151817 }
+    .planner-card h2,.network-heading h2 { margin:0 0 5px;font-size:20px }
+    .planner-card p,.network-heading p { margin:0;color:var(--muted);font-size:13px }
+    .planner-form { display:grid;grid-template-columns:1fr 1fr 190px 140px auto;gap:12px;align-items:end;margin-top:23px }
+    .field label { display:block;margin:0 0 6px;color:#b6ad8b;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.08em }
+    .field select,.field input { height:44px;border-radius:4px }
+    .primary-button { height:44px;padding:0 18px;border:0;border-radius:4px;background:var(--lime);color:#141510;font:inherit;font-weight:750;cursor:pointer }
+    .primary-button:disabled { opacity:.55;cursor:wait }
+    .planner-note { margin-top:14px;color:#8e9893;font-size:11px }
+    .journeys { display:grid;gap:11px;margin-top:19px }
+    .journey { padding:17px;border:1px solid #363c37;border-radius:4px;background:#0f1211 }
+    .journey-head { display:flex;justify-content:space-between;gap:12px;align-items:center }
+    .journey-times { font-size:19px;font-weight:750;font-variant-numeric:tabular-nums }
+    .journey-duration { color:#c2c6bd;font-size:12px }
+    .journey-changes { color:#a9b2a7;font-size:11px;margin-top:2px }
+    .journey-legs { display:grid;gap:9px;margin-top:14px }
+    .journey-leg { display:grid;grid-template-columns:58px 1fr;gap:10px;align-items:start;padding-top:9px;border-top:1px solid #282d29 }
+    .journey-leg .linepill { min-width:48px }
+    .journey-leg small { color:var(--muted) }
+    .journey-leg-title { color:#f0f1e9;font-weight:650 }
+    .route-stops { margin-top:8px;color:#aeb7ae;font-size:11px }
+    .route-stops summary { width:max-content;max-width:100%;cursor:pointer;color:#c6d99a }
+    .route-stops ol { margin:7px 0 0;padding:0;list-style:none;display:grid;gap:5px }
+    .route-stops li { display:flex;justify-content:space-between;gap:12px;padding-left:10px;border-left:1px solid #58614f }
+    .route-stops li:first-child,.route-stops li:last-child { color:#f0f1e9;border-color:#b9d27e }
+    .route-stops time { flex:none;color:#8f998e;font-variant-numeric:tabular-nums }
+    .network-heading { display:flex;justify-content:space-between;align-items:end;gap:16px;margin-bottom:18px }
+    .network-grid { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:11px }
+    .network-line { border:1px solid #363c37;border-radius:4px;background:#111413;overflow:hidden }
+    .network-line summary { display:flex;justify-content:space-between;gap:10px;align-items:center;padding:12px 14px;cursor:pointer;font-weight:700;list-style:none }
+    .network-line summary::-webkit-details-marker { display:none }
+    .network-line summary small { color:var(--muted);font-weight:500 }
+    .network-stops { padding:0 14px 13px;color:#b9c0ba;font-size:12px;line-height:1.8 }
+    .network-direction { margin-top:10px;padding-top:9px;border-top:1px solid #282d29 }
+    .network-direction strong { color:#f3d58d;font-size:11px }
+    .network-direction div { margin-top:3px;line-height:1.75 }
+    .page-intro { margin:8px 0 20px }
+    .page-intro h1 { margin:5px 0 8px }
+    .intro-copy { color:#a9b2b0;margin:0;font-size:15px }
+    .alerts-card > summary { cursor:pointer;list-style:none;margin:0 }
+    .alerts-card > summary::-webkit-details-marker { display:none }
+    .alerts-card > summary::after { content:'＋';color:var(--lime);font-size:14px }
+    .alerts-card[open] > summary::after { content:'−' }
+    .alerts-card[open] > .alert-list { margin-top:12px }
+    .shell { max-width:1040px; padding-top:28px }
+    header { margin-bottom:27px }
+    h1 { font-size:clamp(30px,4vw,44px);letter-spacing:-.045em }
+    .intro { margin-bottom:19px }
+    .intro p,.intro-copy { max-width:650px;font-size:14px;line-height:1.6 }
+    input,select,.clockbox,.board,.alerts-card,.future,.planner-card,.network-card,.journey { border-radius:8px }
+    .board { border:1px solid #353b37;box-shadow:0 10px 30px #0003 }
+    .boardtop { padding:18px 20px }
+    .filters { padding:8px 14px }
+    .directionbar { padding:9px 15px }
+    .tablehead { padding:9px 18px }
+    .row { padding:12px 18px;min-height:56px }
+    .alerts-card,.future { margin-top:14px;padding:15px 17px }
+    .planner-card,.network-card { padding:20px }
+    .favorites-card { margin:18px 0 0;padding:13px 0 0;border:0;border-top:1px solid var(--line);border-radius:0;background:transparent }
+    .journey { padding:16px;border-color:#333b35;background:#121614 }
+    .journey-head { align-items:flex-start }
+    .journey-times { font-size:20px }
+    .favorite-button { margin-top:7px }
+    .journey-leg { grid-template-columns:48px minmax(0,1fr);padding-top:11px }
+    .journey-leg-title,.sub { line-height:1.5 }
+    .transfer-warning { margin-left:48px;border-radius:3px }
+    .network-line { border-radius:6px }
+    @media(max-width:680px) {
+      .shell { padding:15px 12px 26px }
+      header { margin-bottom:20px }
+      .intro { margin-bottom:15px }
+      .intro h1 { max-width:380px }
+      .boardtop { padding:14px 13px }
+      .alerts-card,.future { padding:13px }
+      .planner-card,.network-card { padding:14px }
+      .journey-head { flex-direction:row }
+      .journey { padding:12px }
+      .journey-times { font-size:18px }
+      .favorite-button { padding:7px 8px;font-size:10px }
+      .transfer-warning { margin-left:0 }
+    }
+    @media(max-width:900px) { .planner-form { grid-template-columns:1fr 1fr }.network-grid { grid-template-columns:repeat(2,minmax(0,1fr)) } }
+    @media(max-width:680px) { .shell{padding:18px 12px 28px}header{gap:11px;margin-bottom:22px}.headmeta{display:none}.brand{flex:1;font-size:17px}.menu-toggle{flex:none}.controls{grid-template-columns:1fr}.clockbox{display:none}.board{border-width:2px}.boardtop{padding:16px 13px;align-items:flex-start}.stationname{font-size:21px}.refresh{font-size:10px}.tablehead,.row{grid-template-columns:52px minmax(80px,1fr) 61px;gap:7px;padding-left:11px;padding-right:11px}.tablehead{font-size:9px}.tablehead .platformhead,.platform{display:none}.mins{font-size:14px}.linepill{min-width:37px;height:27px;padding:0 6px;font-size:11px}.filters{padding:9px 8px}.filter{padding:7px 9px;font-size:11px}.directionbar{padding:10px 11px}.directionbar select{min-width:0;max-width:none;flex:1}.foot{padding:11px 12px;flex-direction:column;gap:5px}.future{align-items:flex-start;flex-direction:column;padding:16px}.horizon{justify-content:flex-start}.planner-card,.network-card{padding:15px}.planner-form{grid-template-columns:1fr 1fr;gap:10px}.planner-form .field:nth-child(-n+2),.planner-form .primary-button{grid-column:1/-1}.field-date,.field-time{grid-column:auto}.field select,.field input,.planner-form input{font-size:16px}.primary-button{width:100%}.network-grid{grid-template-columns:1fr}.network-heading{align-items:flex-start;flex-direction:column}.journey-head{align-items:flex-start;flex-direction:column}.journey{padding:14px}.journey-leg{grid-template-columns:48px minmax(0,1fr);gap:8px}.stop-details{padding:12px 12px 15px}.row-button{padding-top:12px;padding-bottom:12px} }
+    @media(max-width:680px) {
+      body { padding-bottom:env(safe-area-inset-bottom);font-size:14px }
+      .shell { width:100%;padding:calc(10px + env(safe-area-inset-top)) 10px 22px }
+      header { position:relative;margin-bottom:17px;gap:10px }
+      .brandmark { width:36px;height:36px }
+      .intro { margin:4px 2px 15px }
+      .intro h1 { font-size:32px;line-height:1.08 }
+      .intro p { font-size:13px }
+      .controls { margin:15px 0 12px;gap:8px }
+      .searchlabel { margin-bottom:5px }
+      input,select { min-height:48px;font-size:16px }
+      .suggestions { position:fixed;top:auto;left:10px;right:10px;max-height:min(55vh,420px);border-radius:10px }
+      .suggestion { min-height:48px;padding:11px }
+      .boardtop { display:flex;align-items:center;gap:8px;padding:13px 11px }
+      .stationname { max-width:56vw;font-size:20px;line-height:1.1 }
+      .stationdetail { max-width:55vw;font-size:11px }
+      .refresh { max-width:42%;white-space:normal;font-size:10px;line-height:1.35 }
+      .refresh button { min-height:36px;margin-top:5px;padding:7px 9px;font-size:11px }
+      .filters { gap:5px;padding:8px;scrollbar-width:none;overscroll-behavior-x:contain }
+      .filters::-webkit-scrollbar { display:none }
+      .filter { min-height:38px;padding:7px 10px;font-size:11px }
+      .tablehead,.row { grid-template-columns:46px minmax(0,1fr) 70px;gap:7px;padding-left:9px;padding-right:9px }
+      .tablehead { font-size:9px;letter-spacing:.06em }
+      .tablehead .platformhead,.platform { display:none }
+      .row { min-height:62px;padding-top:10px;padding-bottom:10px }
+      .linepill { min-width:38px;height:28px }
+      .dest { font-size:13px;line-height:1.25 }
+      .sub { font-size:10px;line-height:1.35 }
+      .timecell { align-self:center }
+      .mins { font-size:15px }
+      .clock { font-size:10px }
+      .stop-details { padding:11px 10px 13px }
+      .stop-item { font-size:11px }
+      .directionbar { gap:8px;padding:9px }
+      .directionbar label { font-size:9px }
+      .directionbar select { min-height:40px;height:40px;font-size:14px }
+      .foot { padding:10px }
+      .alerts-card,.future { margin-top:10px;padding:12px;border-radius:7px }
+      .section-head h2 { font-size:13px }
+      .section-head small { font-size:10px }
+      .future { gap:10px }
+      .future p { font-size:11px }
+      .horizon { width:100%;display:grid;grid-template-columns:repeat(4,1fr) }
+      .horizon button { min-height:38px;padding:6px 4px }
+      .notice { margin-top:10px;padding:11px 12px;font-size:11px }
+      .page-intro { margin:5px 2px 14px }
+      .page-intro h1 { font-size:30px }
+      .planner-card,.network-card { margin-top:12px;padding:13px;border-radius:8px }
+      .planner-card h2,.network-heading h2 { font-size:17px }
+      .planner-form { grid-template-columns:1fr 1fr;gap:10px;margin-top:17px }
+      .planner-form .field:nth-child(-n+2),.planner-form .primary-button { grid-column:1/-1 }
+      .planner-form .field-date,.planner-form .field-time { grid-column:auto }
+      .field label { font-size:10px }
+      .planner-form input { min-width:0;padding:0 9px;font-size:16px }
+      .primary-button { min-height:48px;height:48px }
+      .favorites-card { margin-top:14px;padding-top:12px }
+      .favorite-list { display:grid;grid-template-columns:1fr;max-height:180px;overflow:auto }
+      .favorite-chip { min-height:42px;text-align:left;line-height:1.35 }
+      .planner-note { font-size:10px;line-height:1.5 }
+      .journeys { gap:9px;margin-top:14px }
+      .journey { padding:11px;border-radius:7px }
+      .journey-head { flex-direction:row;gap:6px }
+      .journey-times { font-size:17px }
+      .journey-changes,.journey-duration { font-size:10px }
+      .favorite-button { min-height:38px;max-width:140px;padding:6px 8px;font-size:10px;line-height:1.2 }
+      .journey-leg { grid-template-columns:42px minmax(0,1fr);gap:7px }
+      .journey-leg .linepill { min-width:40px }
+      .journey-leg-title { font-size:12px;overflow-wrap:anywhere }
+      .journey-leg .sub { font-size:10px;overflow-wrap:anywhere }
+      .transfer-warning { margin:0;padding:8px;font-size:10px;line-height:1.4 }
+      .freshness { font-size:10px;line-height:1.45 }
+      .network-grid { grid-template-columns:1fr;gap:8px }
+      .network-line summary { min-height:46px;padding:10px 12px }
+      .network-stops { padding:0 12px 12px;font-size:11px;overflow-wrap:anywhere }
+      .menu-toggle { width:44px;height:44px;min-width:44px }
+      .site-menu { width:min(340px,88vw);padding:calc(20px + env(safe-area-inset-top)) 16px calc(20px + env(safe-area-inset-bottom)) }
+      .menu-link { min-height:48px;font-size:15px }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header>
+      <button class="menu-toggle" id="menuToggle" type="button" aria-label="Menü öffnen" aria-expanded="false"><span></span><span></span><span></span></button>
+      <div class="brand"><div class="brandmark">↗</div><div>Abfahrt<span style="color:var(--lime)">.</span><div class="eyebrow" style="margin-top:2px">Wien · Live monitor</div></div></div>
+      <div class="headmeta"><span class="eyebrow">Fahrgastinformation</span><span class="livebadge"><i class="dot"></i><span id="liveState">Verbinde…</span></span></div>
+    </header>
+    <div class="menu-backdrop" id="menuBackdrop"></div>
+    <nav class="site-menu" id="siteMenu" aria-label="Hauptmenü">
+      <div class="menu-title">Abfahrt<span style="color:var(--lime)">.</span></div>
+      <button class="menu-link active" data-page="board" type="button"><span class="menu-icon">▤</span>Abfahrtstafel</button>
+      <button class="menu-link" data-page="planner" type="button"><span class="menu-icon">↗</span>Verbindung suchen</button>
+      <button class="menu-link" data-page="network" type="button"><span class="menu-icon">◎</span>Linien &amp; Stationen</button>
+    </nav>
+    <section class="page active" id="page-board">
+    <section class="intro">
+      <div class="eyebrow">Dein persönlicher Öffi-Monitor</div>
+      <h1>Was fährt als Nächstes?</h1>
+      <p>Haltestelle suchen, Linie auswählen und die nächsten Abfahrten im Blick behalten.</p>
+    </section>
+    <section class="controls">
+      <div><label class="searchlabel" for="stationSearch">Station</label><div class="searchwrap"><input id="stationSearch" type="search" autocomplete="off" placeholder="Station suchen …" aria-label="Station suchen" aria-controls="suggestions" aria-expanded="false"><div class="suggestions" id="suggestions" role="listbox"></div></div></div>
+      <div class="clockbox"><strong id="now">--:--:--</strong><span>Ortszeit Wien · Europe/Vienna</span></div>
+    </section>
+    <main class="board">
+      <div class="boardtop"><div><div class="eyebrow">Abfahrtsmonitor</div><div class="stationname" id="stationName">Kagraner Platz</div><div class="stationdetail" id="stationDetail">Wien · Wiener Linien</div></div><div class="refresh"><div><strong id="connection">Verbinde…</strong></div><button id="refreshNow" type="button" disabled>↻ Aktualisieren</button><span id="updated">Echtzeitdaten werden geladen</span></div></div>
+      <nav class="filters" aria-label="Verkehrsmittel filtern">
+        <button class="filter active" data-filter="all">Alle <span class="count" id="count-all">0</span></button>
+        <button class="filter" data-filter="u">U-Bahn</button>
+        <button class="filter" data-filter="s">S-Bahn</button>
+        <button class="filter" data-filter="rail">REX / Zug</button>
+        <button class="filter" data-filter="bus">Bus &amp; Bim</button>
+      </nav>
+      <div class="directionbar"><label for="directionSelect">Richtung</label><select id="directionSelect" aria-label="Fahrtrichtung auswählen"><option value="all">Alle Richtungen</option></select></div>
+      <div class="tablehead"><span>Linie</span><span>Richtung</span><span class="platformhead">Steig</span><span style="text-align:right">Abfahrt</span></div>
+      <div id="departures" class="departures"><div class="empty"><div>Abfahrten werden geladen…</div></div></div>
+      <div class="foot"><span id="dataNote">Quelle: Wiener Linien Echtzeitdaten</span><span>Automatische Live-Abfrage alle 5 Sekunden</span></div>
+    </main>
+    <details class="alerts-card"><summary class="section-head"><h2>Aktuelle Störungen</h2><small id="disruptionFreshness">Lade Daten…</small></summary><div id="disruptionList" class="alert-list"><div class="alert-meta">Verkehrsinformationen werden geladen…</div></div></details>
+    <section class="future">
+      <div><h2>Kommende Abfahrten</h2><p>Zeitraum für die Anzeige wählen. Die Datenquelle liefert die nächsten verfügbaren Fahrten.</p></div>
+      <div class="horizon" aria-label="Zeitraum"><button data-min="15">15 min</button><button data-min="30">30 min</button><button data-min="60" class="active">60 min</button><button data-min="70">70 min</button></div>
+    </section>
+      <div class="notice"><strong>ÖBB-S-Bahn und REX:</strong> Die Tafel verwendet Planzeiten aus dem GTFS-Fahrplan 2026. Live-Verspätungen und Zugausfälle sind nicht enthalten.</div>
+    </section>
+    <section class="page" id="page-planner">
+      <div class="page-intro"><div class="eyebrow">Verbindungssuche · Wiener Linien &amp; ÖBB</div><h1>Wie komme ich hin?</h1><p class="intro-copy">Wähle Start und Ziel in Wien oder ganz Österreich. Die Suche kombiniert Wiener U-Bahn, S-Bahn und Regionalzüge.</p></div>
+      <div class="planner-card">
+        <h2>Verbindung suchen</h2><p>Wiener Linien, U-Bahn, S-Bahn und REX</p>
+        <form class="planner-form" id="plannerForm">
+          <div class="field"><label for="tripFromSearch">Von</label><div class="searchwrap"><input id="tripFromSearch" type="search" autocomplete="off" placeholder="Startstation suchen …" aria-label="Startstation suchen" aria-controls="tripFromSuggestions" aria-expanded="false" required><div class="suggestions" id="tripFromSuggestions" role="listbox"></div></div><input id="tripFrom" type="hidden"></div>
+          <div class="field"><label for="tripToSearch">Nach</label><div class="searchwrap"><input id="tripToSearch" type="search" autocomplete="off" placeholder="Zielstation suchen …" aria-label="Zielstation suchen" aria-controls="tripToSuggestions" aria-expanded="false" required><div class="suggestions" id="tripToSuggestions" role="listbox"></div></div><input id="tripTo" type="hidden"></div>
+          <div class="field field-date"><label for="tripDate">Datum</label><input id="tripDate" type="date" required></div>
+          <div class="field field-time"><label for="tripTime">Abfahrt ab</label><input id="tripTime" type="time" required></div>
+          <button class="primary-button" id="searchTrips" type="submit">Suchen</button>
+        </form>
+        <section class="favorites-card"><div class="section-head"><h2>Gespeicherte Verbindungen</h2><small>Nur auf diesem Gerät gespeichert</small></div><div id="favoriteRoutes" class="favorite-list"><span class="alert-meta">Noch keine Favoriten</span></div></section>
+        <div class="planner-note">Die schnellste Ankunft steht zuerst. Umstiege werden mit zusätzlicher Gehzeit berechnet. Echtzeit wird nur angezeigt, wenn sie für die jeweilige Verbindung verfügbar ist; sonst gelten Planzeiten.</div>
+        <div id="journeys" class="journeys" aria-live="polite"></div>
+      </div>
+    </section>
+    <section class="page" id="page-network">
+      <div class="page-intro"><div class="eyebrow">ÖBB-Fahrplan 2026</div><h1>Linien &amp; Stationen</h1><p class="intro-copy">S-Bahn- und REX-Linien mit den Stationen, die im Fahrplan enthalten sind.</p></div>
+      <div class="network-card"><div class="network-heading"><div><h2>Österreichisches Bahnnetz</h2><p id="networkInfo">Linien werden geladen…</p></div></div><div id="networkLines" class="network-grid"></div></div>
+    </section>
+  </div>
+  <script>
+    const REFRESH_MS = 5000;
+    let stops = [];
+    let stations = [];
+    let railStations = [];
+    let plannerStations = [];
+    let railData = { lines:[], validThrough:'' };
+    let selected = null;
+    let currentFilter = 'all';
+    let selectedDirection = 'all';
+    let maxMinutes = 60;
+    let allDepartures = [];
+    let lastRequestAt = 0;
+    let lastSuccessAt = 0;
+    let lastServerTime = '';
+    let isLoading = false;
+    let pollTimer = null;
+    let loadController = null;
+    let expandedDepartureKey = null;
+    const tripStopCache = new Map();
+    const tripStopErrors = new Map();
+    let disruptions = [];
+    let savedRoutes = JSON.parse(localStorage.getItem('abfahrt-favorites') || '[]');
+    let currentRouteQuery = null;
+    const $ = (id) => document.getElementById(id);
+    const search = $('stationSearch');
+    const suggestionBox = $('suggestions');
+
+    function escapeHtml(value) { return String(value == null ? '' : value).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+    function stationName(value) { return String(value || '').trim().replace(/\s+(?:S\s+U|U|S)$/i,'').trim(); }
+    function groupStations(rows) {
+      const groups = new Map();
+      rows.forEach((stop) => {
+        const name = stationName(stop.name);
+        if (!name) return;
+        if (!groups.has(name)) groups.set(name,{key:name,name:name,diva:stop.diva,ids:[]});
+        const group = groups.get(name);
+        if (!group.ids.includes(stop.id)) group.ids.push(stop.id);
+      });
+      return Array.from(groups.values()).map((group) => {
+        group.ids.sort((a,b) => (a === 4181 ? -1 : b === 4181 ? 1 : a-b));
+        return group;
+      }).sort((a,b) => a.name.localeCompare(b.name,'de'));
+    }
+    function classify(line, type) {
+      const n = String(line || '').toUpperCase();
+      if (/^U[1-4,6]$/.test(n) || /^U[1-6]$/.test(n)) return 'u';
+      if (/^(S\d+|S\d+\+|R|REX|CJX|RJ|RJX|IC|EC|D|IR)/.test(n) || String(type || '').toLowerCase() === 'pttrain') return 'rail';
+      if (/^S\d+/.test(n) || String(type || '').toLowerCase() === 'pttrains') return 's';
+      return 'bus';
+    }
+    function isS(line, type) { return /^S\d+/.test(String(line || '').toUpperCase()) || String(type || '').toLowerCase() === 'pttrains'; }
+    function lineClass(line, type) {
+      const n = String(line || '').toLowerCase();
+      if (/^u[1-4,6]$/.test(n)) return n.replace(',', '');
+      if (isS(line, type)) return 's';
+      if (/^(rex|r|cjx|rj)/.test(n)) return 'rex';
+      return '';
+    }
+    function category(line, type) { return isS(line, type) ? 's' : classify(line, type); }
+    function minuteCount(dep) {
+      const dt = dep && (dep.timeReal || dep.timePlanned);
+      if (dt) { const parsed = Date.parse(dt); if (!Number.isNaN(parsed)) return Math.max(0, Math.round((parsed - Date.now()) / 60000)); }
+      const count = Number(dep && dep.countdown);
+      return Number.isFinite(count) ? count : 0;
+    }
+    function formatClock(dep) {
+      const raw = dep && (dep.timeReal || dep.timePlanned);
+      if (!raw) return '—';
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? '—' : new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Vienna'}).format(d);
+    }
+    function delayText(item) {
+      if (!item.realtime) return 'Planzeit';
+      const planned = Date.parse(item.dep && item.dep.timePlanned || '');
+      const actual = Date.parse(item.dep && item.dep.timeReal || '');
+      if (!Number.isFinite(planned) || !Number.isFinite(actual)) return 'Echtzeit';
+      const minutes = Math.round((actual - planned) / 60000);
+      return minutes > 0 ? 'Echtzeit · +' + minutes + ' min Verspätung' : minutes < 0 ? 'Echtzeit · ' + Math.abs(minutes) + ' min früher' : 'Echtzeit · pünktlich';
+    }
+    function flatten(data) {
+      const result = [];
+      const monitors = data && data.data && data.data.monitors || [];
+      const seen = new Set();
+      monitors.forEach((monitor) => (monitor.lines || []).forEach((line) => {
+        const list = line.departures && line.departures.departure || [];
+        list.forEach((item) => {
+          const entry = { line: line.name || (item.vehicle && item.vehicle.name) || '?', type: line.type || (item.vehicle && item.vehicle.type) || '', towards: line.towards || (item.vehicle && item.vehicle.towards) || 'Richtung unbekannt', platform: line.platform || (item.vehicle && item.vehicle.platform) || monitor.locationStop && monitor.locationStop.properties && monitor.locationStop.properties.gate || '—', dep: item.departureTime || {}, realtime: Boolean(item.departureTime && item.departureTime.timeReal) };
+          const key = [entry.line,entry.towards,entry.platform,entry.dep.timeReal || entry.dep.timePlanned].join('|');
+          if (!seen.has(key)) { seen.add(key); result.push(entry); }
+        });
+      }));
+      return result.sort((a,b) => minuteCount(a.dep) - minuteCount(b.dep));
+    }
+    function visibleDepartures() {
+      return allDepartures.filter((item) => minuteCount(item.dep) <= maxMinutes && (currentFilter === 'all' || category(item.line,item.type) === currentFilter) && (selectedDirection === 'all' || item.towards === selectedDirection));
+    }
+    function departureKey(item) { return [selected && selected.key || '',item.line,item.towards,item.platform,item.dep && (item.dep.timePlanned || item.dep.timeReal) || ''].join('|'); }
+    function detailTime(value) {
+      if (!value) return '';
+      const match = String(value).match(/(\d{2}:\d{2})(?::\d{2})?$/);
+      return match ? match[1] : '';
+    }
+    function stopSequenceMarkup(stops, line, currentName) {
+      if (!stops || !stops.length) return '<div class="sub">Für diese Fahrt liegt keine Haltestellenfolge vor.</div>';
+      return '<h3>' + escapeHtml(line + ' · Haltestellen ab ' + currentName) + '</h3><div class="stop-list">' + stops.map((stop,index) => {
+        const time = detailTime(stop.departure) || detailTime(stop.arrival) || (stop.departure ? localClock(stop.departure) : '');
+        return '<div class="stop-item ' + (index === 0 ? 'current' : '') + '"><span>' + escapeHtml(stop.name) + (stop.platform && stop.platform !== '—' ? ' · Steig ' + escapeHtml(stop.platform) : '') + '</span><span>' + escapeHtml(time || '—') + '</span></div>';
+      }).join('') + '</div>';
+    }
+    async function toggleTripDetails(index, button) {
+      const panel = $('stop-details-' + index);
+      if (!panel) return;
+      if (!panel.hidden) { panel.hidden = true; button.setAttribute('aria-expanded','false'); expandedDepartureKey = null; return; }
+      document.querySelectorAll('.stop-details').forEach((other) => { other.hidden = true; });
+      document.querySelectorAll('.row-button[data-departure-index]').forEach((other) => other.setAttribute('aria-expanded','false'));
+      panel.hidden = false; button.setAttribute('aria-expanded','true');
+      const item = allDepartures[index];
+      const key = departureKey(item);
+      expandedDepartureKey = key;
+      const cachedStops = tripStopCache.get(key);
+      if (item.stops && item.stops.length) { panel.innerHTML = stopSequenceMarkup(item.stops,item.line,selected.name); return; }
+      if (cachedStops) { panel.innerHTML = stopSequenceMarkup(cachedStops,item.line,selected.name); return; }
+      if (!selected || !selected.diva || !/^U[1-6]$|^S\d+$|^REX/i.test(item.line)) { panel.innerHTML = stopSequenceMarkup([],item.line,selected ? selected.name : ''); return; }
+      tripStopCache.set(key, []);
+      tripStopErrors.delete(key);
+      panel.innerHTML = '<div class="sub">Haltestellen werden geladen…</div>';
+      const timestamp = item.dep.timeReal || item.dep.timePlanned;
+      const moment = timestamp ? new Date(timestamp) : new Date();
+      const parts = new Intl.DateTimeFormat('en-CA',{timeZone:'Europe/Vienna',year:'numeric',month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hourCycle:'h23'}).formatToParts(moment);
+      const values = Object.fromEntries(parts.map((part) => [part.type,part.value]));
+      const date = values.year + '-' + values.month + '-' + values.day;
+      const time = values.hour + ':' + values.minute;
+      try {
+        const params = new URLSearchParams({station:String(selected.diva),line:item.line,towards:item.towards,fromName:selected.name,date,time});
+        const response = await fetch('/api/trip-stops?' + params.toString(),{cache:'no-store'});
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Haltestellenfolge konnte nicht geladen werden.');
+        tripStopCache.set(key,data.stops || []);
+        const currentIndex = allDepartures.findIndex((candidate) => departureKey(candidate) === key);
+        const currentPanel = currentIndex >= 0 ? $('stop-details-' + currentIndex) : null;
+        if (currentPanel && expandedDepartureKey === key) currentPanel.innerHTML = stopSequenceMarkup(data.stops,item.line,selected.name);
+      } catch (error) {
+        tripStopCache.set(key,null); tripStopErrors.set(key,error.message);
+        const currentIndex = allDepartures.findIndex((candidate) => departureKey(candidate) === key);
+        const currentPanel = currentIndex >= 0 ? $('stop-details-' + currentIndex) : null;
+        if (currentPanel && expandedDepartureKey === key) currentPanel.innerHTML = '<div class="sub">' + escapeHtml(error.message) + '</div>';
+      }
+    }
+    function updateDirections() {
+      const select = $('directionSelect');
+      const previous = selectedDirection;
+      const directions = Array.from(new Set(allDepartures.map((item) => item.towards).filter(Boolean))).sort((a,b) => a.localeCompare(b,'de'));
+      select.innerHTML = '<option value="all">Alle Richtungen</option>' + directions.map((d) => '<option value="' + escapeHtml(d) + '">' + escapeHtml(d) + '</option>').join('');
+      selectedDirection = directions.includes(previous) ? previous : 'all';
+      select.value = selectedDirection;
+    }
+    function render() {
+      const rows = visibleDepartures();
+      if (expandedDepartureKey && !rows.some((item) => departureKey(item) === expandedDepartureKey)) expandedDepartureKey = null;
+      $('count-all').textContent = String(allDepartures.filter((x) => minuteCount(x.dep) <= maxMinutes).length);
+      if (!rows.length) {
+        const noFeed = allDepartures.length === 0;
+        $('departures').innerHTML = '<div class="empty"><div><strong>' + (noFeed ? 'Keine Abfahrten verfügbar' : 'Keine passenden Abfahrten') + '</strong>' + (noFeed ? 'Für diese Station oder diesen Zeitraum liegen derzeit keine Fahrten vor.' : 'In diesem Zeitraum gibt es keine Abfahrten für den gewählten Filter.') + '</div></div>';
+        return;
+      }
+      $('departures').innerHTML = rows.map((item) => {
+        const mins = minuteCount(item.dep);
+        const label = mins === 0 ? 'jetzt' : 'in ' + mins + ' min';
+        const status = delayText(item);
+        const pill = lineClass(item.line,item.type);
+        const departureTime = item.dep.timeReal || item.dep.timePlanned || '';
+        const index = allDepartures.indexOf(item);
+        const key = departureKey(item);
+        const isExpanded = key === expandedDepartureKey;
+        const cachedStops = item.stops && item.stops.length ? item.stops : tripStopCache.get(key);
+        const detailHtml = isExpanded ? cachedStops && cachedStops.length ? stopSequenceMarkup(cachedStops,item.line,selected.name) : tripStopErrors.has(key) ? '<div class="sub">' + escapeHtml(tripStopErrors.get(key)) + '</div>' : '<div class="sub">Haltestellen werden geladen…</div>' : '';
+        return '<div class="departure-record"><button type="button" class="row row-button" data-departure-index="' + index + '" aria-expanded="' + isExpanded + '" aria-label="' + escapeHtml(item.line + ' Richtung ' + item.towards + '. Haltestellenverlauf anzeigen') + '"><div class="linecell"><span class="linepill ' + pill + '">' + escapeHtml(item.line) + '</span></div><div><div class="dest">' + escapeHtml(item.towards) + '</div><div class="sub ' + (item.realtime && Date.parse(item.dep.timeReal || 0) > Date.parse(item.dep.timePlanned || 0) ? 'delay' : '') + '">' + escapeHtml(status) + '</div></div><div class="platform">' + escapeHtml(item.platform) + '</div><div class="timecell"><div class="mins" data-countdown="" data-time="' + escapeHtml(departureTime) + '">' + label + '</div><div class="clock">' + formatClock(item.dep) + '</div></div></button><div class="stop-details" id="stop-details-' + index + '"' + (isExpanded ? '' : ' hidden') + '>' + detailHtml + '</div></div>';
+      }).join('');
+      document.querySelectorAll('.row-button[data-departure-index]').forEach((button) => button.addEventListener('click', () => toggleTripDetails(Number(button.dataset.departureIndex), button)));
+    }
+    function scheduleLoad() {
+      clearTimeout(pollTimer);
+      const wait = lastRequestAt ? Math.max(0,REFRESH_MS - (Date.now() - lastRequestAt)) : 0;
+      pollTimer = setTimeout(loadDepartures,wait);
+    }
+    async function loadDepartures() {
+      if (!selected) return;
+      if (isLoading) return;
+      const wait = lastRequestAt ? REFRESH_MS - (Date.now() - lastRequestAt) : 0;
+      if (wait > 0) { pollTimer = setTimeout(loadDepartures,wait); return; }
+      isLoading = true;
+      const requestStation = selected;
+      const requestController = new AbortController();
+      loadController = requestController;
+      const scheduled = requestStation.source === 'rail';
+      lastRequestAt = Date.now();
+      $('liveState').textContent = 'Aktualisiere'; $('connection').textContent = 'Aktualisiere'; $('refreshNow').disabled = true;
+      try {
+        const params = new URLSearchParams();
+        requestStation.ids.slice(0,30).forEach((id) => params.append('stopId',String(id)));
+        const response = await fetch(scheduled ? '/api/rail/departures?station=' + encodeURIComponent(requestStation.stationId) : '/api/departures?' + params.toString(), {cache:'no-store',signal:requestController.signal});
+        const body = await response.text();
+        let data;
+        try { data = JSON.parse(body); }
+        catch (_) {
+          if (scheduled && response.status === 404) throw new Error('Der geöffnete Server ist noch nicht aktualisiert. Beende den alten Node-Server mit Strg+C, starte node server.js im Ordner outputs\\live-abfahrten neu und öffne die ausgegebene Adresse.');
+          throw new Error('Der Server hat keine gültige JSON-Antwort geliefert (HTTP ' + response.status + ').');
+        }
+        if (!response.ok) throw new Error(data.error || 'Daten konnten nicht geladen werden.');
+        if (selected.key !== requestStation.key) return;
+        allDepartures = scheduled ? (data.departures || []).map((item) => ({ line:item.line, type:'pttrain', towards:item.towards, platform:item.platform, dep:{timePlanned:item.timePlanned}, realtime:false, stops:item.stops, source:'rail' })) : flatten(data).map((item) => ({...item, source:'wiener-linien'}));
+        updateDirections();
+        const serverTime = data && data.message && data.message.serverTime;
+        lastSuccessAt = Date.now();
+        lastServerTime = serverTime || '';
+        $('liveState').textContent = scheduled ? 'Fahrplan' : 'Live verbunden'; $('connection').textContent = scheduled ? 'Plan' : 'Live';
+        $('connection').className = '';
+        $('dataNote').textContent = scheduled ? 'Quelle: ÖBB GTFS Fahrplan 2026' : 'Quelle: Wiener Linien Echtzeitdaten';
+        $('updated').textContent = scheduled ? 'Planabfahrten · keine Echtzeitdaten' : 'Daten werden live geprüft';
+        document.querySelector('.foot span:last-child').textContent = scheduled ? 'Planzeiten ohne aktuelle ÖBB-Verspätungsdaten' : 'Automatische Live-Abfrage alle 5 Sekunden';
+        render();
+      } catch (err) {
+        if (selected.key !== requestStation.key) return;
+        $('liveState').textContent = 'Verbindung gestört'; $('connection').textContent = 'Nicht erreichbar'; $('connection').className = 'error';
+        $('updated').textContent = err.message;
+        if (!allDepartures.length) $('departures').innerHTML = '<div class="empty error"><div><strong>' + (scheduled ? 'Fahrplan nicht erreichbar' : 'Live-Daten nicht erreichbar') + '</strong>' + escapeHtml(err.message) + '<br>Server läuft? Bitte später erneut versuchen.</div></div>';
+      } finally {
+        if (loadController === requestController) {
+          isLoading = false;
+          loadController = null;
+          $('refreshNow').disabled = true;
+          pollTimer = setTimeout(loadDepartures,Math.max(0,REFRESH_MS - (Date.now() - lastRequestAt)));
+        }
+      }
+    }
+    function chooseStation(station) {
+      clearTimeout(pollTimer);
+      if (loadController) { loadController.abort(); loadController = null; isLoading = false; }
+      expandedDepartureKey = null;
+      tripStopCache.clear(); tripStopErrors.clear();
+      lastRequestAt = 0;
+      selected = station;
+      search.value = station.name;
+      suggestionBox.classList.remove('open'); search.setAttribute('aria-expanded','false');
+      $('stationName').textContent = station.name;
+      const scheduled = station.source === 'rail';
+      $('stationDetail').textContent = scheduled ? 'ÖBB · S-Bahn und REX · Planfahrplan' : 'Wien · alle verfügbaren Steige';
+      document.querySelector('.brand .eyebrow').textContent = scheduled ? 'ÖBB · Planfahrplan' : 'Wien · Live monitor';
+      allDepartures = [];
+      selectedDirection = 'all';
+      lastSuccessAt = 0; lastServerTime = '';
+      $('liveState').textContent = scheduled ? 'Fahrplan' : 'Station gewählt'; $('connection').textContent = scheduled ? 'Plan' : 'Wird geladen'; $('updated').textContent = scheduled ? 'Planabfahrten werden geladen' : 'Warte auf Live-Abfrage';
+      $('departures').innerHTML = '<div class="empty"><div><strong>Station gewechselt</strong>Die Abfahrten werden geladen.</div></div>';
+      scheduleLoad();
+    }
+    function showSuggestions() {
+      const q = search.value.trim().toLocaleLowerCase('de');
+      if (q.length < 2) { suggestionBox.classList.remove('open'); return; }
+      const matches = stations.filter((s) => s.name.toLocaleLowerCase('de').includes(q)).slice(0,12);
+      suggestionBox.innerHTML = matches.length ? matches.map((s, i) => '<button type="button" role="option" aria-selected="false" class="suggestion" data-key="' + escapeHtml(s.key) + '" id="station-option-' + i + '"><span>' + escapeHtml(s.name) + '</span><small>' + (s.source === 'rail' ? 'ÖBB · S-Bahn / REX' : 'Wiener Linien') + '</small></button>').join('') : '<div class="suggestion"><span>Keine Station gefunden</span></div>';
+      suggestionBox.classList.add('open');
+      search.setAttribute('aria-expanded','true');
+      suggestionBox.querySelectorAll('[data-key]').forEach((button) => button.addEventListener('pointerdown', (event) => {
+        event.preventDefault();
+        const station = stations.find((s) => s.key === button.dataset.key);
+        if (station) chooseStation(station);
+      }));
+    }
+    search.addEventListener('keydown', (event) => {
+      const options = Array.from(suggestionBox.querySelectorAll('[data-key]'));
+      if (event.key === 'Enter' && options.length) { event.preventDefault(); options[0].dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); }
+      if (event.key === 'Escape') { suggestionBox.classList.remove('open'); search.setAttribute('aria-expanded','false'); }
+    });
+    search.addEventListener('input', showSuggestions);
+    search.addEventListener('focus', showSuggestions);
+    document.addEventListener('click', (event) => { if (!event.target.closest('.searchwrap')) { suggestionBox.classList.remove('open'); search.setAttribute('aria-expanded','false'); } });
+    document.querySelectorAll('.filter').forEach((button) => button.addEventListener('click', () => {
+      document.querySelectorAll('.filter').forEach((b) => b.classList.remove('active'));
+      button.classList.add('active'); currentFilter = button.dataset.filter; render();
+    }));
+    document.querySelectorAll('.horizon button').forEach((button) => button.addEventListener('click', () => {
+      document.querySelectorAll('.horizon button').forEach((b) => b.classList.remove('active'));
+      button.classList.add('active'); maxMinutes = Number(button.dataset.min); render();
+    }));
+    $('directionSelect').addEventListener('change', (event) => { selectedDirection = event.target.value; render(); });
+    $('refreshNow').addEventListener('click', () => {
+      if (Date.now() - lastRequestAt >= REFRESH_MS && !isLoading) { clearTimeout(pollTimer); loadDepartures(); }
+    });
+    function setPage(page) {
+      document.querySelectorAll('.page').forEach((node) => node.classList.toggle('active', node.id === 'page-' + page));
+      document.querySelectorAll('.menu-link').forEach((node) => node.classList.toggle('active', node.dataset.page === page));
+      closeMenu();
+    }
+    function closeMenu() {
+      $('siteMenu').classList.remove('open'); $('menuBackdrop').classList.remove('open'); $('menuToggle').setAttribute('aria-expanded','false');
+    }
+    $('menuToggle').addEventListener('click', () => {
+      const open = !$('siteMenu').classList.contains('open');
+      $('siteMenu').classList.toggle('open',open); $('menuBackdrop').classList.toggle('open',open); $('menuToggle').setAttribute('aria-expanded',String(open));
+    });
+    $('menuBackdrop').addEventListener('click',closeMenu);
+    document.querySelectorAll('.menu-link').forEach((button) => button.addEventListener('click', () => setPage(button.dataset.page)));
+
+    function localClock(iso) { return new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Vienna'}).format(new Date(iso)); }
+    function routeStopTime(value) {
+      const match = String(value || '').match(/(?:^|\s)(\d{2}:\d{2})(?::\d{2})?$/);
+      return match ? match[1] : '';
+    }
+    function renderJourneyLeg(leg) {
+      const stops = Array.isArray(leg.stops) ? leg.stops : [];
+      const routeName = leg.destination ? 'Richtung ' + leg.destination : 'Ziel ' + leg.to;
+      const stopsMarkup = stops.length ? '<details class="route-stops"><summary>Haltestellen anzeigen · ' + stops.length + '</summary><ol>' + stops.map((stop) => {
+        const time = routeStopTime(stop.departure) || routeStopTime(stop.arrival);
+        return '<li><span>' + escapeHtml(stop.name) + '</span>' + (time ? '<time>' + escapeHtml(time) + '</time>' : '') + '</li>';
+      }).join('') + '</ol></details>' : '';
+      const serviceCode = leg.serviceCode ? ' · Fahrtkennung ' + leg.serviceCode : '';
+      return '<div class="journey-leg"><span class="linepill ' + lineClass(leg.line,'') + '">' + escapeHtml(leg.line) + '</span><div><div class="journey-leg-title">' + escapeHtml(leg.trainName || leg.line) + ' · ' + escapeHtml(routeName) + escapeHtml(serviceCode) + '</div><div class="sub">' + escapeHtml(leg.from) + ' → ' + escapeHtml(leg.to) + ' · ' + localClock(leg.departure) + ' ab Steig ' + escapeHtml(leg.platformFrom) + ' · ' + localClock(leg.arrival) + ' an' + (leg.delayMinutes > 0 ? ' · +' + leg.delayMinutes + ' min Verspätung' : leg.realtime ? ' · Echtzeit' : '') + '</div>' + stopsMarkup + '</div></div>';
+    }
+    function toggleFavorite(index) {
+      const journey = window.currentJourneys && window.currentJourneys[index];
+      if (!journey || !currentRouteQuery) return;
+      const key = currentRouteQuery.from + '|' + currentRouteQuery.to;
+      const existing = savedRoutes.findIndex(item => item.key === key);
+      if (existing >= 0) savedRoutes.splice(existing,1);
+      else savedRoutes.push({ key, from:currentRouteQuery.from, to:currentRouteQuery.to, fromName:currentRouteQuery.fromName, toName:currentRouteQuery.toName });
+      localStorage.setItem('abfahrt-favorites',JSON.stringify(savedRoutes));
+      renderFavorites();
+      const button=document.querySelector('[data-favorite="'+index+'"]');
+      if(button) button.textContent=existing>=0?'☆ Verbindung merken':'★ Gespeichert';
+    }
+    function renderFavorites() {
+      const host=$('favoriteRoutes'); if(!host) return;
+      host.innerHTML=savedRoutes.length?savedRoutes.map((item,index)=>'<button class="favorite-chip" type="button" data-saved-route="'+index+'">★ '+escapeHtml(item.fromName)+' → '+escapeHtml(item.toName)+'</button>').join(''):'<span class="alert-meta">Noch keine Favoriten</span>';
+      host.querySelectorAll('[data-saved-route]').forEach(button=>button.addEventListener('click',()=>{
+        const item=savedRoutes[Number(button.dataset.savedRoute)]; if(!item)return;
+        $('tripFrom').value=item.from; $('tripTo').value=item.to; $('tripFromSearch').value=item.fromName; $('tripToSearch').value=item.toName; setPage('planner'); $('plannerForm').requestSubmit();
+      }));
+    }
+    async function loadDisruptions() {
+      try {
+        const response=await fetch('/api/disruptions',{cache:'no-store'}); const data=await response.json(); if(!response.ok) throw new Error(data.error||'Störungen nicht verfügbar');
+        disruptions=data.disruptions||[];
+        $('disruptionFreshness').textContent='Aktualisiert '+localClock(data.fetchedAt);
+        $('disruptionList').innerHTML=disruptions.length?disruptions.slice(0,8).map(item=>'<article class="alert-item"><strong>'+escapeHtml(item.title)+'</strong><p>'+escapeHtml(item.description||'Weitere Informationen in der Wiener Linien Verkehrsauskunft.')+'</p></article>').join(''):'<div class="alert-meta">Derzeit sind keine aktiven Störungsmeldungen verfügbar.</div>';
+      } catch(error) { $('disruptionFreshness').textContent='Abruf fehlgeschlagen'; $('disruptionList').innerHTML='<div class="alert-meta">Störungsinfos gerade nicht erreichbar.</div>'; }
+    }
+    function renderJourney(journey,index) {
+      const liveLegs = journey.legs.filter((leg) => leg.realtime).length;
+      const dataStatus = liveLegs === journey.legs.length ? 'Echtzeit' : liveLegs ? 'teilweise Echtzeit' : 'Planzeiten';
+      const transferText = journey.changes ? journey.changes + (journey.changes === 1 ? ' Umstieg' : ' Umstiege') : 'Direktverbindung';
+      const legs=journey.legs.map((leg,i)=>renderJourneyLeg(leg)+(i<journey.legs.length-1?(()=>{const gap=Math.round((Date.parse(journey.legs[i+1].departure)-Date.parse(leg.arrival))/60000);return '<div class="transfer-warning">'+(gap<=4?'⚠ Knapp: '+gap+' min Umstiegszeit · Anschlussrisiko':gap<=7?'Wenig Puffer: '+gap+' min bis zum Anschluss':gap+' min Umstiegszeit')+'</div>'})():'' )).join('');
+      const key=currentRouteQuery&&currentRouteQuery.from+'|'+currentRouteQuery.to;
+      const isSaved=savedRoutes.some(item=>item.key===key);
+      return '<article class="journey"><div class="journey-head"><div><div class="journey-times">' + localClock(journey.departure) + ' → ' + localClock(journey.arrival) + '</div><div class="journey-changes">' + (index === 0 ? 'Schnellste Ankunft · ' : '') + transferText + ' · ' + dataStatus + '</div></div><div><div class="journey-duration">' + journey.durationMinutes + ' min</div><button class="favorite-button" type="button" data-favorite="'+index+'">'+(isSaved?'★ Gespeichert':'☆ Verbindung merken')+'</button></div></div><div class="journey-legs">' + legs + '</div><div class="freshness">Quelle: Wiener Linien / VOR · Abruf '+(journey.fetchedAt?localClock(journey.fetchedAt):'jetzt')+' · Echtzeit nur bei ausdrücklich markierten Teilstrecken</div></article>';
+    }
+    function stationSearchKey(value) { return String(value || '').toLocaleLowerCase('de').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]/g,''); }
+    function setupPlannerStationSearch(inputId, hiddenId, suggestionsId) {
+      const input = $(inputId), hidden = $(hiddenId), box = $(suggestionsId);
+      const close = () => { box.classList.remove('open'); input.setAttribute('aria-expanded','false'); };
+      const choose = (station) => { input.value = station.name; hidden.value = station.routeKey; close(); };
+      const show = () => {
+        hidden.value = '';
+        const query = stationSearchKey(input.value.trim());
+        if (query.length < 2) { close(); return; }
+        const matches = plannerStations
+          .map((station) => ({ station, key: stationSearchKey(station.name) }))
+          .filter((entry) => entry.key.includes(query))
+          .sort((a,b) => {
+            const rank = (key) => key === query ? 0 : key.startsWith(query) ? 1 : 2;
+            return rank(a.key) - rank(b.key) || a.station.name.localeCompare(b.station.name,'de');
+          })
+          .slice(0,12)
+          .map((entry) => entry.station);
+        box.innerHTML = matches.length ? matches.map((station,index) => '<button type="button" role="option" aria-selected="false" class="suggestion" data-id="' + escapeHtml(station.routeKey) + '" id="' + inputId + '-option-' + index + '"><span>' + escapeHtml(station.name) + '</span><small>' + (station.source === 'rail' ? 'ÖBB · S-Bahn / REX' : 'Wiener Linien · U-Bahn / Tram / Bus') + '</small></button>').join('') : '<div class="suggestion"><span>Keine Station gefunden</span></div>';
+        box.classList.add('open'); input.setAttribute('aria-expanded','true');
+        box.querySelectorAll('[data-id]').forEach((button) => button.addEventListener('pointerdown',(event) => {
+          event.preventDefault();
+          const station = plannerStations.find((candidate) => candidate.routeKey === button.dataset.id);
+          if (station) choose(station);
+        }));
+      };
+      input.addEventListener('input',show); input.addEventListener('focus',show);
+      input.addEventListener('keydown',(event) => {
+        const first = box.querySelector('[data-id]');
+        if (event.key === 'Enter' && first) { event.preventDefault(); first.dispatchEvent(new PointerEvent('pointerdown',{bubbles:true})); }
+        if (event.key === 'Escape') close();
+      });
+      return { choose };
+    }
+    document.addEventListener('click',(event) => {
+      [['tripFromSearch','tripFromSuggestions'],['tripToSearch','tripToSuggestions']].forEach(([inputId,boxId]) => {
+        if (!event.target.closest('#' + inputId) && !event.target.closest('#' + boxId)) {
+          $(boxId).classList.remove('open'); $(inputId).setAttribute('aria-expanded','false');
+        }
+      });
+    });
+    function renderRailNetwork() {
+      $('networkInfo').textContent = railData.lines.length + ' Linien · ' + railStations.length + ' Stationen · Fahrplan gültig bis ' + new Intl.DateTimeFormat('de-AT').format(new Date(railData.validThrough + 'T12:00:00'));
+      $('networkLines').innerHTML = railData.lines.map((item) => '<details class="network-line"><summary><span>' + escapeHtml(item.line) + '</span><small>' + item.stationCount + ' Stationen</small></summary><div class="network-stops">' + item.directions.map((direction) => '<div class="network-direction"><strong>Richtung ' + escapeHtml(direction.towards) + '</strong><div>' + direction.stations.map(escapeHtml).join(' → ') + '</div></div>').join('') + '</div></details>').join('');
+    }
+    async function loadRailNetwork() {
+      const response = await fetch('/api/rail/stations',{cache:'no-store'});
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.error || 'Bahnstationen konnten nicht geladen werden.');
+      railData = data;
+      railStations = data.stations.map((station) => ({id:station.id,name:station.name,key:'rail:' + station.id,stationId:station.id,ids:[],source:'rail'}));
+      stations = stations.concat(railStations).sort((a,b) => a.name.localeCompare(b.name,'de'));
+      renderRailNetwork();
+      const wienerStations = stations.filter((station) => !station.source).map((station) => ({...station, routeKey:'wl:' + station.diva, source:'wiener-linien'}));
+      const uniqueStations = new Map();
+      wienerStations.concat(railStations.map((station) => ({...station, routeKey:'rail:' + station.id}))).forEach((station) => {
+        if (!uniqueStations.has(station.routeKey)) uniqueStations.set(station.routeKey, station);
+      });
+      plannerStations = Array.from(uniqueStations.values());
+      const fromSearch = setupPlannerStationSearch('tripFromSearch','tripFrom','tripFromSuggestions');
+      setupPlannerStationSearch('tripToSearch','tripTo','tripToSuggestions');
+      const dw = railStations.find((station) => station.name === 'Deutsch-Wagram Bahnhof');
+      if (dw) fromSearch.choose({...dw, routeKey:'rail:' + dw.id});
+      const localNow = new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16);
+      $('tripDate').value = localNow.slice(0,10); $('tripTime').value = localNow.slice(11,16);
+    }
+    $('plannerForm').addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const from = $('tripFrom').value, to = $('tripTo').value;
+      if (!from || !to) { $('journeys').innerHTML = '<div class="empty">Bitte Start und Ziel aus den Suchvorschlägen auswählen.</div>'; return; }
+      if (from === to) { $('journeys').innerHTML = '<div class="empty">Start und Ziel müssen verschieden sein.</div>'; return; }
+      const button = $('searchTrips'); button.disabled = true; button.textContent = 'Suche…';
+      $('journeys').innerHTML = '<div class="empty">Verbindungen werden gesucht…</div>';
+      try {
+        const fromStation = plannerStations.find((station) => station.routeKey === from);
+        const toStation = plannerStations.find((station) => station.routeKey === to);
+        currentRouteQuery = {from,to,fromName:fromStation.name,toName:toStation.name};
+        const params = new URLSearchParams({from,to,fromName:fromStation.name,toName:toStation.name,date:$('tripDate').value,time:$('tripTime').value});
+        const response = await fetch('/api/connections?' + params.toString(),{cache:'no-store'});
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Verbindungen konnten nicht gesucht werden.');
+        window.currentJourneys=data.connections||[];
+        window.currentJourneys.forEach(journey=>journey.fetchedAt=data.fetchedAt);
+        $('journeys').innerHTML = data.connections.length ? data.connections.map(renderJourney).join('') : '<div class="empty">Keine passende Verbindung gefunden. Prüfe Station, Datum und Uhrzeit.</div>';
+        $('journeys').querySelectorAll('[data-favorite]').forEach(button=>button.addEventListener('click',()=>toggleFavorite(Number(button.dataset.favorite))));
+      } catch (error) { $('journeys').innerHTML = '<div class="empty error">' + escapeHtml(error.message) + '</div>'; }
+      finally { button.disabled = false; button.textContent = 'Suchen'; }
+    });
+
+    function tick() {
+      $('now').textContent = new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Europe/Vienna'}).format(new Date());
+      document.querySelectorAll('[data-countdown]').forEach((element) => {
+        const raw = element.dataset.time;
+        const parsed = raw ? Date.parse(raw) : NaN;
+        const mins = Number.isNaN(parsed) ? 0 : Math.max(0, Math.round((parsed - Date.now()) / 60000));
+        element.textContent = mins === 0 ? 'jetzt' : 'in ' + mins + ' min';
+      });
+      const elapsed = lastRequestAt ? Math.floor((Date.now() - lastRequestAt) / 1000) : 0;
+      const remaining = Math.max(0,Math.ceil((REFRESH_MS - (Date.now() - lastRequestAt)) / 1000));
+      $('refreshNow').disabled = isLoading || (lastRequestAt > 0 && remaining > 0);
+      if (lastSuccessAt) {
+        const stamp = lastServerTime ? new Intl.DateTimeFormat('de-AT',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Europe/Vienna'}).format(new Date(lastServerTime)) : '';
+        $('updated').textContent = (stamp ? 'Datenstand ' + stamp + ' · ' : '') + 'nächster Abruf in ' + remaining + ' s';
+      } else if (lastRequestAt) {
+        $('updated').textContent = 'Letzter Versuch vor ' + elapsed + ' s · erneuter Abruf in ' + remaining + ' s';
+      }
+    }
+    async function init() {
+      tick(); setInterval(tick,1000);
+      renderFavorites(); loadDisruptions(); setInterval(loadDisruptions,60000);
+      try {
+        const response = await fetch('/stops.json',{cache:'no-store'});
+        stops = await response.json();
+        stations = groupStations(stops);
+        await loadRailNetwork();
+        selected = stations.find((s) => s.name === 'Kagraner Platz') || stations[0];
+        if (selected) { search.value = selected.name; $('stationName').textContent = selected.name; $('stationDetail').textContent = 'Wien · alle verfügbaren Steige'; }
+        await loadDepartures();
+      } catch (error) {
+        $('liveState').textContent = 'Fehler'; $('connection').textContent = 'Startfehler';
+        $('departures').innerHTML = '<div class="empty error"><div><strong>Stationskatalog konnte nicht geladen werden</strong>' + escapeHtml(error.message) + '</div></div>';
+      }
+    }
+    if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1')) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+    init();
+  </script>
+</body>
+</html>

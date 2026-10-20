@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: abfahrt-live-monitor
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: APP_USER
+        sync: false
+      - key: APP_PASSWORD
+        sync: false
